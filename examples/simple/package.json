@@ -1,0 +1,15 @@
+{
+  "name": "chista-express-example-simple",
+  "private": true,
+  "scripts": {
+    "start": "npx ts-node app.ts"
+  },
+  "dependencies": {
+    "chista-express": "file:../..",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
