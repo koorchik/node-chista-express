@@ -1,6 +1,6 @@
 {
   "name": "chista-express",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A lightweight, flexible REST API server framework built on Express.js with TypeScript support, designed for rapid API development with built-in dependency injection, session management, and WebSocket support",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
