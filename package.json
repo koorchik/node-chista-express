@@ -51,16 +51,16 @@
     "server",
     "api"
   ],
-  "author": "Metaframework Contributors",
+  "author": "Chista Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/metaframework/express-rest-api.git"
+    "url": "https://github.com/koorchik/node-chista-express.git"
   },
   "bugs": {
-    "url": "https://github.com/metaframework/express-rest-api/issues"
+    "url": "https://github.com/koorchik/node-chista-express/issues"
   },
-  "homepage": "https://github.com/metaframework/express-rest-api#readme",
+  "homepage": "https://github.com/koorchik/node-chista-express#readme",
   "peerDependencies": {
     "express": "^4.19.2 || ^5.0.0",
     "express-ws": "^5.0.2"
