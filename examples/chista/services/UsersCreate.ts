@@ -1,3 +1,4 @@
+import LIVR from 'livr';
 import { Base } from './Base';
 
 const validation = {
@@ -5,26 +6,27 @@ const validation = {
   email: ['required', 'email'],
 } as const;
 
-interface CreateUserInput {
-  name: string;
-  email: string;
-}
+type UsersCreateParams = LIVR.InferFromSchema<typeof validation>;
 
-interface User {
+type UsersCreateResult = {
   id: number;
   name: string;
   email: string;
-}
+};
 
-export class UsersCreate extends Base<CreateUserInput, User> {
+export class UsersCreate extends Base<UsersCreateParams, UsersCreateResult> {
   static validation = validation;
 
-  async execute(data: CreateUserInput): Promise<User> {
+  async execute(data: UsersCreateParams): Promise<UsersCreateResult> {
     const id = this.db.size + 1;
     const user = { id, name: data.name, email: data.email };
 
     this.db.set(id, user);
 
-    return user;
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email
+    };
   }
 }

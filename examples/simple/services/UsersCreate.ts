@@ -1,18 +1,24 @@
 import { RestApiError, type Service } from '../../../src';
 
-interface Dependencies {
+type UsersCreateDependencies = {
   db: Map<number, { id: number; name: string; email: string }>;
-}
+};
 
-interface Input {
+type UsersCreateParams = {
   name: string;
   email: string;
-}
+};
 
-export class UsersCreate implements Service<Input> {
-  constructor(private deps: Dependencies) {}
+type UsersCreateResult = {
+  id: number;
+  name: string;
+  email: string;
+};
 
-  async run(input: Input) {
+export class UsersCreate implements Service<UsersCreateParams, UsersCreateResult> {
+  constructor(private deps: UsersCreateDependencies) {}
+
+  async run(input: UsersCreateParams): Promise<UsersCreateResult> {
     if (!input.name || !input.email) {
       throw new RestApiError(
         {
@@ -32,6 +38,10 @@ export class UsersCreate implements Service<Input> {
 
     this.deps.db.set(id, user);
 
-    return user;
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email
+    };
   }
 }

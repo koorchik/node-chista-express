@@ -1,17 +1,23 @@
 import { RestApiError, type Service } from '../../../src';
 
-interface Dependencies {
+type UsersShowDependencies = {
   db: Map<number, { id: number; name: string; email: string }>;
-}
+};
 
-interface Input {
+type UsersShowParams = {
   id: string;
-}
+};
 
-export class UsersShow implements Service<Input> {
-  constructor(private deps: Dependencies) {}
+type UsersShowResult = {
+  id: number;
+  name: string;
+  email: string;
+};
 
-  async run(input: Input) {
+export class UsersShow implements Service<UsersShowParams, UsersShowResult> {
+  constructor(private deps: UsersShowDependencies) {}
+
+  async run(input: UsersShowParams): Promise<UsersShowResult> {
     const id = parseInt(input.id, 10);
     const user = this.deps.db.get(id);
 
@@ -19,6 +25,10 @@ export class UsersShow implements Service<Input> {
       throw new RestApiError({ code: 'NOT_FOUND', message: 'User not found' }, 404);
     }
 
-    return user;
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email
+    };
   }
 }

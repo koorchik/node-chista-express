@@ -1,12 +1,12 @@
 import { BaseSimple } from './BaseSimple';
 
-interface HealthCheckOutput {
+type HealthCheckResult = {
   status: string;
   timestamp: string;
-}
+};
 
-export class HealthCheck extends BaseSimple<void, HealthCheckOutput> {
-  async execute(): Promise<HealthCheckOutput> {
+export class HealthCheck extends BaseSimple<void, HealthCheckResult> {
+  async execute(): Promise<HealthCheckResult> {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
