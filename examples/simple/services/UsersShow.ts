@@ -17,7 +17,7 @@ type UsersShowResult = {
 export class UsersShow implements Service<UsersShowParams, UsersShowResult> {
   constructor(private deps: UsersShowDependencies) {}
 
-  async run(input: UsersShowParams): Promise<UsersShowResult> {
+  async run(input: UsersShowParams) {
     const id = parseInt(input.id, 10);
     const user = this.deps.db.get(id);
 

@@ -6,7 +6,7 @@ type HealthCheckResult = {
 };
 
 export class HealthCheck extends BaseSimple<void, HealthCheckResult> {
-  async execute(): Promise<HealthCheckResult> {
+  async execute() {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),

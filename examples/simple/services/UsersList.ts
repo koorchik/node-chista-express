@@ -13,7 +13,7 @@ type UsersListResult = Array<{
 export class UsersList implements Service<void, UsersListResult> {
   constructor(private deps: UsersListDependencies) {}
 
-  async run(): Promise<UsersListResult> {
+  async run() {
     return Array.from(this.deps.db.values()).map(user => ({
       id: user.id,
       name: user.name,

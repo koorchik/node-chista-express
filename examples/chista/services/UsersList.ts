@@ -7,7 +7,7 @@ type UsersListResult = Array<{
 }>;
 
 export class UsersList extends Base<void, UsersListResult> {
-  async execute(): Promise<UsersListResult> {
+  async execute() {
     return Array.from(this.db.values()).map(user => ({
       id: user.id,
       name: user.name,

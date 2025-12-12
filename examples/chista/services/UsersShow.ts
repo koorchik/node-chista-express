@@ -17,7 +17,7 @@ type UsersShowResult = {
 export class UsersShow extends Base<UsersShowParams, UsersShowResult> {
   static validation = validation;
 
-  async execute(data: UsersShowParams): Promise<UsersShowResult> {
+  async execute(data: UsersShowParams) {
     const user = this.db.get(data.id);
 
     if (!user) {

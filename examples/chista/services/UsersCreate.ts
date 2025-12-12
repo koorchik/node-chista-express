@@ -17,7 +17,7 @@ type UsersCreateResult = {
 export class UsersCreate extends Base<UsersCreateParams, UsersCreateResult> {
   static validation = validation;
 
-  async execute(data: UsersCreateParams): Promise<UsersCreateResult> {
+  async execute(data: UsersCreateParams) {
     const id = this.db.size + 1;
     const user = { id, name: data.name, email: data.email };
 

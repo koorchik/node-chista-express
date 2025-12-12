@@ -18,7 +18,7 @@ type UsersCreateResult = {
 export class UsersCreate implements Service<UsersCreateParams, UsersCreateResult> {
   constructor(private deps: UsersCreateDependencies) {}
 
-  async run(input: UsersCreateParams): Promise<UsersCreateResult> {
+  async run(input: UsersCreateParams) {
     if (!input.name || !input.email) {
       throw new RestApiError(
         {
