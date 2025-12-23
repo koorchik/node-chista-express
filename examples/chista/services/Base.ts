@@ -19,12 +19,6 @@ export abstract class Base<TInput = unknown, TOutput = unknown> extends ServiceB
     this.db = deps.db;
   }
 
-  abstract execute(data: TInput): Promise<TOutput>;
-
-  async doRun(data: TInput): Promise<TOutput> {
-    return this.execute(data);
-  }
-
   async checkPermissions(): Promise<boolean> {
     return true;
   }
