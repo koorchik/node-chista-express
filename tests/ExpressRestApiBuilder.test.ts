@@ -355,7 +355,7 @@ describe('ExpressRestApiBuilder', () => {
             loadSession: async () => ({ userId: 1 }),
             services: [{ method: 'GET', path: '/test' } as any],
           })
-      ).toThrow(/Route must be a tuple of \[method, path, ServiceClass\]/);
+      ).toThrow(/Route must be \[method, path, ServiceClass\] or \[method, path, ServiceClass, options\]/);
     });
 
     test('should throw on route tuple with wrong length', () => {
@@ -366,7 +366,7 @@ describe('ExpressRestApiBuilder', () => {
             loadSession: async () => ({ userId: 1 }),
             services: [['GET', '/test'] as any],
           })
-      ).toThrow(/Route must be a tuple of \[method, path, ServiceClass\]/);
+      ).toThrow(/Route must be \[method, path, ServiceClass\] or \[method, path, ServiceClass, options\]/);
     });
 
     test('should include array name and index in error message', () => {

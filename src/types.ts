@@ -1,4 +1,4 @@
-import type { Request } from 'express';
+import type { Request, RequestHandler } from 'express';
 import type { RestApiError } from './RestApiError';
 
 export interface Logger {
@@ -38,11 +38,21 @@ export type MapError = (error: unknown) => RestApiError | undefined;
 
 export type LoadSession = (request: Request) => Promise<Session>;
 
-export type RouteDefinition = [
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WS',
-  path: string,
-  service: ServiceClass
-];
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WS';
+
+export interface RouteOptions {
+  middlewares?: RequestHandler[];
+
+  // Per-route execution overrides (same as global config options)
+  runService?: RunService;
+  createService?: CreateService;
+  mapError?: MapError;
+  extractInput?: ExtractInput;
+}
+
+export type RouteDefinition =
+  | [method: HttpMethod, path: string, service: ServiceClass]
+  | [method: HttpMethod, path: string, service: ServiceClass, options: RouteOptions];
 
 export interface RestApiServerConfig {
   apiBaseUrl?: string;

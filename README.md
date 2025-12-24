@@ -44,6 +44,8 @@ app.use('*', (req, res) => res.status(404).send('Not found'));
 - **Session Management** - Built-in session loading with `loadSession`
 - **WebSocket Support** - Integrated express-ws for WebSocket endpoints
 - **Structured Errors** - Custom error handling with RestApiError
+- **Per-Route Options** - Configure middlewares, input extraction, and service execution per route
+- **File Upload Support** - Easy integration with multer and other upload libraries
 
 ## Installation
 
@@ -57,6 +59,7 @@ See the [examples](./examples) folder:
 
 - **[simple](./examples/simple)** - Basic usage with plain service classes
 - **[chista](./examples/chista)** - Integration with [chista](https://www.npmjs.com/package/chista) for validation and lifecycle hooks
+- **[file-upload](./examples/file-upload)** - File uploads with multer middleware
 
 ## Quick Start
 
@@ -255,7 +258,9 @@ When using `createService`, the default `extractInput` provides:
   ...context.request.body,       // Request body
   ws: context.ws,                // WebSocket instance (for WS routes)
   userAgent: '...',              // User-Agent header
-  clientIp: '...'                // Client IP address
+  clientIp: '...',               // Client IP address
+  file: context.request.file,    // Single file (from multer)
+  files: context.request.files   // Multiple files (from multer)
 }
 ```
 
@@ -318,6 +323,149 @@ const routes = [
   ['WS', '/ws/chat/:roomId', ChatService]  // WebSocket route
 ];
 ```
+
+### Route Options
+
+Routes can include an optional 4th element for per-route configuration:
+
+```typescript
+const routes = [
+  // Standard route (3-tuple)
+  ['GET', '/users', UsersList],
+
+  // Route with options (4-tuple)
+  ['POST', '/upload', UploadService, {
+    middlewares: [multer().single('file')],
+    extractInput: (ctx) => ({ ...ctx.request.body, file: ctx.request.file }),
+  }],
+];
+```
+
+Available options:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `middlewares` | `RequestHandler[]` | Express middlewares to run before the service |
+| `runService` | `RunService` | Override global `runService` for this route |
+| `createService` | `CreateService` | Override global `createService` for this route |
+| `extractInput` | `ExtractInput` | Override global `extractInput` for this route |
+| `mapError` | `MapError` | Override global `mapError` for this route |
+
+## File Uploads
+
+The library supports file uploads through per-route middlewares. Use any upload middleware like [multer](https://www.npmjs.com/package/multer):
+
+```bash
+npm install multer @types/multer
+```
+
+### Basic File Upload
+
+```typescript
+import { ExpressRestApiBuilder, RestApiError } from 'chista-express';
+import multer from 'multer';
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+class AvatarUpload {
+  async run(input: { file?: Express.Multer.File }) {
+    if (!input.file) {
+      throw new RestApiError({ message: 'No file uploaded', code: 'NO_FILE' }, 400);
+    }
+
+    // Upload to cloud storage, save to disk, etc.
+    return {
+      filename: input.file.originalname,
+      size: input.file.size,
+      mimetype: input.file.mimetype,
+    };
+  }
+}
+
+const builder = new ExpressRestApiBuilder({
+  createService: (Service, ctx) => new Service({ session: ctx.session }),
+  loadSession: async () => ({ userId: 1 }),
+
+  services: [
+    // Regular JSON route
+    ['GET', '/users', UsersList],
+
+    // File upload route with multer middleware
+    ['POST', '/avatar', AvatarUpload, {
+      middlewares: [upload.single('avatar')],
+    }],
+
+    // Multiple files
+    ['POST', '/documents', DocumentsUpload, {
+      middlewares: [upload.array('documents', 10)],
+    }],
+  ],
+});
+```
+
+The default `extractInput` automatically includes `file` and `files` from the request (attached by multer).
+
+### Streaming Uploads with Per-Route runService
+
+For large files where you need to check permissions before streaming, use per-route `runService` to pass the raw request to your service:
+
+```typescript
+class LargeFileService {
+  constructor(private deps: { session: Session; db: Database }) {}
+
+  async run(input: { folderId: string; request: Request }) {
+    // 1. CHECK PERMISSIONS FIRST (before any streaming)
+    const folder = await this.deps.db.folders.findById(input.folderId);
+    if (folder.ownerId !== this.deps.session.userId) {
+      throw new RestApiError({ message: 'Access denied' }, 403);
+    }
+
+    // 2. STREAM FILES (only if authorized)
+    const files = await this.streamToStorage(input.request);
+    return { files };
+  }
+
+  private streamToStorage(request: Request): Promise<UploadedFile[]> {
+    // Use busboy, formidable, or other streaming parsers
+  }
+}
+
+const builder = new ExpressRestApiBuilder({
+  createService: (Service, ctx) => new Service({ session: ctx.session, db }),
+  loadSession: async (req) => validateToken(req.headers.authorization),
+
+  services: [
+    // Standard routes use global createService
+    ['GET', '/folders', FoldersList],
+
+    // Streaming upload: per-route runService for raw request access
+    ['POST', '/folders/:folderId/upload', LargeFileService, {
+      runService: async (Service, context) => {
+        const service = new Service({
+          session: context.session,
+          db,
+        });
+        return service.run({
+          ...context.request.params,
+          request: context.request, // Pass raw request for streaming
+        });
+      },
+    }],
+  ],
+});
+```
+
+This pattern ensures:
+- Permission checks run **before** file streaming begins
+- If unauthorized, the request is rejected immediately (no wasted bandwidth)
+- The service controls streaming directly
+
+### Multipart Form Data
+
+The JSON body parser automatically skips `multipart/form-data` requests, so file upload middleware can parse the body. No additional configuration needed.
 
 ## WebSocket-Aware Middleware
 
@@ -567,6 +715,8 @@ import type {
   MapError,
   RunService,
   RouteDefinition,
+  RouteOptions,
+  HttpMethod,
   RestApiServerConfig
 } from 'chista-express';
 ```
@@ -642,22 +792,36 @@ const extractInput: ExtractInput = (context) => ({
 
 #### RouteDefinition
 
-Routes are defined as tuples:
+Routes are defined as tuples, with an optional 4th element for route options:
 
 ```typescript
-type RouteDefinition = [
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WS',
-  path: string,
-  service: ServiceClass
-];
+type RouteDefinition =
+  | [method: HttpMethod, path: string, service: ServiceClass]
+  | [method: HttpMethod, path: string, service: ServiceClass, options: RouteOptions];
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WS';
 
 // Example
 const routes: RouteDefinition[] = [
   ['GET', '/users', UsersList],
   ['POST', '/users', UsersCreate],
-  ['GET', '/users/:id', UsersShow],
+  ['POST', '/upload', FileUpload, { middlewares: [upload.single('file')] }],
   ['WS', '/ws', WebSocketHandler],
 ];
+```
+
+#### RouteOptions
+
+Per-route configuration options:
+
+```typescript
+interface RouteOptions {
+  middlewares?: RequestHandler[];  // Express middlewares for this route
+  runService?: RunService;         // Override global runService
+  createService?: CreateService;   // Override global createService
+  extractInput?: ExtractInput;     // Override global extractInput
+  mapError?: MapError;             // Override global mapError
+}
 ```
 
 ### Typed Service Example

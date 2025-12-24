@@ -1,10 +1,11 @@
-import express, { Application, Request, Response, NextFunction, Router } from 'express';
+import express, { Application, Request, Response, NextFunction, Router, RequestHandler } from 'express';
 import expressWs from 'express-ws';
 import { RestApiError } from './RestApiError';
 import { createJsonParserMiddleware } from './middleware';
 import type {
   RestApiServerConfig,
   RouteDefinition,
+  RouteOptions,
   Logger,
   RequestContext,
   Session,
@@ -64,13 +65,13 @@ export class ExpressRestApiBuilder {
     for (let i = 0; i < routes.length; i++) {
       const route = routes[i];
 
-      if (!Array.isArray(route) || route.length !== 3) {
+      if (!Array.isArray(route) || route.length < 3 || route.length > 4) {
         throw new Error(
-          `${arrayName}[${i}]: Route must be a tuple of [method, path, ServiceClass]`
+          `${arrayName}[${i}]: Route must be [method, path, ServiceClass] or [method, path, ServiceClass, options]`
         );
       }
 
-      const [method, path, ServiceClass] = route;
+      const [method, path, ServiceClass, options] = route;
 
       // Validate HTTP method
       if (
@@ -96,6 +97,21 @@ export class ExpressRestApiBuilder {
           `${arrayName}[${i}]: ServiceClass must be a class/constructor function, got ${typeof ServiceClass}`
         );
       }
+
+      // Validate options if present
+      if (options !== undefined) {
+        if (typeof options !== 'object' || options === null) {
+          throw new Error(`${arrayName}[${i}]: Route options must be an object`);
+        }
+        if (options.middlewares !== undefined && !Array.isArray(options.middlewares)) {
+          throw new Error(`${arrayName}[${i}]: options.middlewares must be an array`);
+        }
+        // Validate per-route callbacks
+        this.#validateFunction(options.runService, `${arrayName}[${i}].options.runService`);
+        this.#validateFunction(options.createService, `${arrayName}[${i}].options.createService`);
+        this.#validateFunction(options.mapError, `${arrayName}[${i}].options.mapError`);
+        this.#validateFunction(options.extractInput, `${arrayName}[${i}].options.extractInput`);
+      }
     }
   }
 
@@ -108,6 +124,9 @@ export class ExpressRestApiBuilder {
       ws,
       userAgent: request.headers['user-agent'],
       clientIp: request.socket?.remoteAddress,
+      // Include file(s) if present (from multer or similar middleware)
+      file: (request as any).file,
+      files: (request as any).files,
     };
   }
 
@@ -176,7 +195,7 @@ export class ExpressRestApiBuilder {
 
   #addRoutesToRouter(router: Router, routes: RouteDefinition[], basePath: string = ''): void {
     for (const route of routes) {
-      const [method, path, ServiceClass] = route;
+      const [method, path, ServiceClass, options] = route;
 
       if (method === 'WS') {
         this.#registerWebSocketRoute(route, basePath);
@@ -189,6 +208,7 @@ export class ExpressRestApiBuilder {
             ServiceClass,
             req,
             session: (req as any).session,
+            options,
           });
 
           res.json({ success: true, result });
@@ -197,8 +217,12 @@ export class ExpressRestApiBuilder {
         }
       };
 
+      // Collect middlewares for this route
+      const middlewares: RequestHandler[] = options?.middlewares ?? [];
+
       router[method.toLowerCase() as 'get' | 'post' | 'put' | 'delete' | 'patch'](
         path,
+        ...middlewares,
         routeHandler
       );
     }
@@ -246,11 +270,13 @@ export class ExpressRestApiBuilder {
     req,
     session,
     ws,
+    options,
   }: {
     ServiceClass: ServiceClass;
     req: Request;
     session?: Session;
     ws?: any;
+    options?: RouteOptions;
   }): Promise<any> {
     const context: RequestContext = {
       request: req,
@@ -258,22 +284,27 @@ export class ExpressRestApiBuilder {
       ws,
     };
 
-    // Use runService if provided (full control mode)
-    if (this.#config.runService) {
-      return await this.#config.runService(ServiceClass, context);
+    // Route-level runService takes precedence over global
+    const runService = options?.runService ?? this.#config.runService;
+    if (runService) {
+      return await runService(ServiceClass, context);
     }
 
-    // Otherwise use createService with default flow
-    const service = this.#config.createService!(ServiceClass, context);
+    // Route-level createService takes precedence over global
+    const createService = options?.createService ?? this.#config.createService!;
+    const service = createService(ServiceClass, context);
 
-    const extractInput = this.#config.extractInput || this.#defaultExtractInput;
+    // Route-level extractInput takes precedence over global
+    const extractInput = options?.extractInput ?? this.#config.extractInput ?? this.#defaultExtractInput;
     const input = extractInput(context);
 
     try {
       return await service.run(input);
     } catch (error) {
-      if (this.#config.mapError) {
-        const mapped = this.#config.mapError(error);
+      // Route-level mapError takes precedence over global
+      const mapError = options?.mapError ?? this.#config.mapError;
+      if (mapError) {
+        const mapped = mapError(error);
         if (mapped) {
           throw mapped;
         }

@@ -18,6 +18,15 @@ export function createJsonParserMiddleware(
     strict: config?.strict ?? true,
   });
 
+  // Wrap JSON parser to skip for multipart/form-data (file uploads)
+  const wrappedJsonParser: RequestHandler = (req, res, next) => {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+      return next();
+    }
+    return jsonParser(req, res, next);
+  };
+
   const jsonErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     if (err instanceof SyntaxError && 'body' in err) {
       logger?.error(`Invalid JSON in request body: ${err.message}`);
@@ -33,7 +42,7 @@ export function createJsonParserMiddleware(
     next(err);
   };
 
-  return [jsonParser, jsonErrorHandler];
+  return [wrappedJsonParser, jsonErrorHandler];
 }
 
 export type JsonParserMiddleware = (RequestHandler | ErrorRequestHandler)[];
@@ -41,6 +50,16 @@ export type JsonParserMiddleware = (RequestHandler | ErrorRequestHandler)[];
 export function skipForWebSocket(middleware: RequestHandler): RequestHandler {
   return (req, res, next) => {
     if (req.headers.upgrade === 'websocket') {
+      return next();
+    }
+    return middleware(req, res, next);
+  };
+}
+
+export function skipForMultipart(middleware: RequestHandler): RequestHandler {
+  return (req, res, next) => {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
       return next();
     }
     return middleware(req, res, next);
