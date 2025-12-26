@@ -1,5 +1,5 @@
 import LIVR from 'livr';
-import { Base } from './Base';
+import { Base } from '../Base';
 
 const validation = {
   name: ['required', { min_length: 1 }],

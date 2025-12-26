@@ -1,4 +1,4 @@
-import { BaseSimple } from './BaseSimple';
+import { BaseSimple } from '../BaseSimple';
 
 type HealthCheckResult = {
   status: string;

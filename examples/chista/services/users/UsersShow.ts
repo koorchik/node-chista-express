@@ -1,6 +1,6 @@
 import LIVR from 'livr';
 import { ServiceError } from 'chista';
-import { Base } from './Base';
+import { Base } from '../Base';
 
 const validation = {
   id: ['required', 'positive_integer'],

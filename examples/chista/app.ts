@@ -1,10 +1,10 @@
 import type { Server } from 'http';
 import { ExpressRestApiBuilder, RestApiError, type ServiceClass } from '../../src';
 import { ServiceError } from 'chista';
-import { HealthCheck } from './services/HealthCheck';
-import { UsersList } from './services/UsersList';
-import { UsersShow } from './services/UsersShow';
-import { UsersCreate } from './services/UsersCreate';
+import { HealthCheck } from './services/system/HealthCheck';
+import { UsersList } from './services/users/UsersList';
+import { UsersShow } from './services/users/UsersShow';
+import { UsersCreate } from './services/users/UsersCreate';
 import type { Database } from './services/Base';
 
 // In-memory database for the example
