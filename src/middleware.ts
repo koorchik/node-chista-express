@@ -1,6 +1,6 @@
 import express from 'express';
 import type { RequestHandler, ErrorRequestHandler } from 'express';
-import type { Logger } from './types';
+import type { Logger } from './types.js';
 
 export interface JsonParserConfig {
   limit?: string | number;

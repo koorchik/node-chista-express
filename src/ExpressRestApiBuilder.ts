@@ -1,7 +1,7 @@
 import express, { Application, Request, Response, NextFunction, Router, RequestHandler } from 'express';
 import expressWs from 'express-ws';
-import { RestApiError } from './RestApiError';
-import { createJsonParserMiddleware } from './middleware';
+import { RestApiError } from './RestApiError.js';
+import { createJsonParserMiddleware } from './middleware.js';
 import type {
   RestApiServerConfig,
   RouteDefinition,
@@ -10,7 +10,7 @@ import type {
   RequestContext,
   Session,
   ServiceClass,
-} from './types';
+} from './types.js';
 
 export class ExpressRestApiBuilder {
   #app: Application;

@@ -1,5 +1,5 @@
 import type { Request, RequestHandler } from 'express';
-import type { RestApiError } from './RestApiError';
+import type { RestApiError } from './RestApiError.js';
 
 export interface Logger {
   info(message: string): void;
