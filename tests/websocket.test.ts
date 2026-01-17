@@ -316,4 +316,37 @@ describe('WebSocket Integration', () => {
       });
     });
   });
+
+  test('should NOT call loadSession for unauthenticated WebSocket routes', (done) => {
+    const loadSession = jest.fn(async () => ({ userId: 42 }));
+
+    class PublicWsService {
+      async run({ ws }: { ws: WebSocket }) {
+        ws.send('public');
+      }
+    }
+
+    const builder = new ExpressRestApiBuilder({
+      loadSession,
+      createService: (Service) => new Service(),
+      unauthenticatedServices: [['WS', '/ws/public', PublicWsService]],
+    });
+    builder.build();
+
+    server = builder.getApp().listen(0, () => {
+      port = (server.address() as any).port;
+      const ws = new WebSocket(`ws://localhost:${port}/api/public/ws/public`);
+
+      ws.on('message', (data) => {
+        expect(data.toString()).toBe('public');
+        expect(loadSession).not.toHaveBeenCalled();
+        ws.close();
+        done();
+      });
+
+      ws.on('error', (err) => {
+        done(err);
+      });
+    });
+  });
 });

@@ -151,7 +151,7 @@ export class ExpressRestApiBuilder {
 
     if (this.#config.unauthenticatedServices && this.#config.unauthenticatedServices.length > 0) {
       const unauthenticatedRouter = express.Router();
-      this.#addRoutesToRouter(unauthenticatedRouter, this.#config.unauthenticatedServices, unauthenticatedApiBaseUrl);
+      this.#addRoutesToRouter(unauthenticatedRouter, this.#config.unauthenticatedServices, unauthenticatedApiBaseUrl, false);
       this.#app.use(unauthenticatedApiBaseUrl, unauthenticatedRouter);
 
       const httpRoutes = this.#config.unauthenticatedServices.filter(([method]) => method !== 'WS');
@@ -182,7 +182,7 @@ export class ExpressRestApiBuilder {
         }
       });
 
-      this.#addRoutesToRouter(authenticatedRouter, this.#config.services, apiBaseUrl);
+      this.#addRoutesToRouter(authenticatedRouter, this.#config.services, apiBaseUrl, true);
       this.#app.use(apiBaseUrl, authenticatedRouter);
 
       const httpRoutes = this.#config.services.filter(([method]) => method !== 'WS');
@@ -193,12 +193,12 @@ export class ExpressRestApiBuilder {
 
   }
 
-  #addRoutesToRouter(router: Router, routes: RouteDefinition[], basePath: string = ''): void {
+  #addRoutesToRouter(router: Router, routes: RouteDefinition[], basePath: string = '', requiresAuth: boolean = true): void {
     for (const route of routes) {
       const [method, path, ServiceClass, options] = route;
 
       if (method === 'WS') {
-        this.#registerWebSocketRoute(route, basePath);
+        this.#registerWebSocketRoute(route, basePath, requiresAuth);
         continue;
       }
 
@@ -228,12 +228,16 @@ export class ExpressRestApiBuilder {
     }
   }
 
-  #registerWebSocketRoute([_method, path, ServiceClass]: RouteDefinition, basePath: string = ''): void {
+  #registerWebSocketRoute(
+    [_method, path, ServiceClass]: RouteDefinition,
+    basePath: string = '',
+    requiresAuth: boolean = true
+  ): void {
     const fullPath = basePath + path;
     (this.#app as any).ws(fullPath, async (ws: any, req: Request) => {
       try {
         let session;
-        if (this.#config.loadSession) {
+        if (requiresAuth && this.#config.loadSession) {
           session = await this.#config.loadSession(req);
           (req as any).session = session;
         }

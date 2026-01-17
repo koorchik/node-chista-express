@@ -506,6 +506,10 @@ builder.build();
 
 ## WebSocket Support
 
+WebSocket routes follow the same authentication pattern as HTTP routes:
+- Routes in `services` require authentication (`loadSession` is called)
+- Routes in `unauthenticatedServices` are public (`loadSession` is NOT called)
+
 ```typescript
 class ChatService {
   async run({ ws, roomId, session }) {
