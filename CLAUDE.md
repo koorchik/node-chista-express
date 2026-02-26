@@ -14,6 +14,14 @@ npm run format         # Format with Prettier
 npm run type-check     # TypeScript type checking without emit
 ```
 
+Additional test commands:
+```bash
+npm run test:unit          # Run only unit tests (tests/unit/)
+npm run test:integration   # Run only integration tests (tests/integration/)
+npm run test:coverage      # Run tests with coverage report
+npm run clean              # Remove dist/ and coverage/
+```
+
 Run a single test file:
 ```bash
 npx jest tests/ExpressRestApiBuilder.test.ts
@@ -45,9 +53,13 @@ This is a REST API builder library for Express.js using the builder pattern to c
 
 Routes are tuples: `[method, path, ServiceClass]`
 
+Routes can also include options: `[method, path, ServiceClass, RouteOptions]`
+- `RouteOptions` supports per-route `middlewares`, `runService`, `createService`, `mapError`, and `extractInput` overrides
+
 - `services`: Routes that go through `loadSession` (mounted at `/api`)
 - `unauthenticatedServices`: Public routes (mounted at `/api/anon`)
 - WebSocket routes use method `'WS'`
+- Base URLs are configurable via `apiBaseUrl` and `unauthenticatedApiBaseUrl` in config
 
 ### Response Format
 
@@ -57,3 +69,9 @@ All responses follow: `{ success: boolean, result?: any, error?: { message, code
 
 - `RestApiError`: Structured error with HTTP status code
 - `mapError`: Optional function to transform domain errors to `RestApiError`
+
+## Setup
+
+- Requires Node >= 18
+- Peer dependencies: `express` (^4.19.2 || ^5.0.0), `express-ws` (^5.0.2)
+- Dual CJS/ESM output: `dist/cjs/` and `dist/esm/`
