@@ -203,6 +203,50 @@ describe('RestApiServer Integration', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.result.token).toBe('abc123');
     });
+
+    test('should NOT call loadSession for unauthenticated HTTP routes', async () => {
+      const loadSession = jest.fn(async () => ({ userId: 42 }));
+
+      class PublicService {
+        async run() {
+          return 'ok';
+        }
+      }
+
+      const builder = new ExpressRestApiBuilder({
+        loadSession,
+        createService: (Service) => new Service(),
+        unauthenticatedServices: [['GET', '/public', PublicService]],
+      });
+      builder.build();
+
+      const response = await request(builder.getApp()).get('/api/public/public').expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(loadSession).not.toHaveBeenCalled();
+    });
+
+    test('should NOT call loadSession for unknown paths under unauthenticated base URL', async () => {
+      const loadSession = jest.fn(async () => ({ userId: 42 }));
+
+      class PublicService {
+        async run() {
+          return 'ok';
+        }
+      }
+
+      const builder = new ExpressRestApiBuilder({
+        loadSession,
+        createService: (Service) => new Service(),
+        unauthenticatedServices: [['GET', '/public', PublicService]],
+        services: [['GET', '/protected', PublicService]],
+      });
+      builder.build();
+
+      await request(builder.getApp()).get('/api/public/nonexistent').expect(404);
+
+      expect(loadSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('Error Handling', () => {

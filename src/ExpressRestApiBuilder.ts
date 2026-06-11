@@ -152,6 +152,11 @@ export class ExpressRestApiBuilder {
     if (this.#config.unauthenticatedServices && this.#config.unauthenticatedServices.length > 0) {
       const unauthenticatedRouter = express.Router();
       this.#addRoutesToRouter(unauthenticatedRouter, this.#config.unauthenticatedServices, unauthenticatedApiBaseUrl, false);
+      // Prevent unmatched requests from falling through to the authenticated router
+      // (relevant when unauthenticatedApiBaseUrl is a sub-path of apiBaseUrl).
+      unauthenticatedRouter.use((_req: Request, res: Response) => {
+        res.status(404).json({ success: false, error: { message: 'Not found' } });
+      });
       this.#app.use(unauthenticatedApiBaseUrl, unauthenticatedRouter);
 
       const httpRoutes = this.#config.unauthenticatedServices.filter(([method]) => method !== 'WS');
